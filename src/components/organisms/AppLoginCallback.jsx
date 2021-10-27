@@ -1,8 +1,7 @@
 /** @format */
 import { useEffect } from 'react';
-import { useAuthActions } from '../../hooks';
 import { LoadingOverlay } from '../../components';
-import { useAuthDispatch } from '../../providers';
+import { useAuthActions, useAuthDispatch } from '../../providers';
 
 export const AppLoginCallback = () => {
 	const { login } = useAuthActions();

@@ -1,15 +1,10 @@
 /** @format */
 
 import * as React from 'react';
-import {
-	ProductHero,
-	withRoot,
-} from '../../components';
+import { ProductHero } from '../../components';
 
-const HomeRoot = () => (
+export const Home = () => (
 	<React.Fragment>
 		<ProductHero />
 	</React.Fragment>
 );
-
-export const Home = withRoot(HomeRoot);

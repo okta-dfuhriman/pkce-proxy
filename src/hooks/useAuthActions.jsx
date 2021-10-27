@@ -3,6 +3,8 @@
 import { useOktaAuth } from '@okta/okta-react';
 import { getUserInfo as getUser } from '../utils';
 
+const ORG_URL = process.env.REACT_APP_OKTA_ORG_URL;
+
 export const useAuthActions = () => {
 	const { authState, oktaAuth } = useOktaAuth();
 
@@ -15,24 +17,23 @@ export const useAuthActions = () => {
 
 				dispatch({ type: 'LOGIN_REDIRECT' });
 
-        await oktaAuth.storeTokensFromRedirect();
+				await oktaAuth.storeTokensFromRedirect();
 
-        oktaAuth.removeOriginalUri();
+				oktaAuth.removeOriginalUri();
 
-        await oktaAuth.authStateManager.updateAuthState();
+				await oktaAuth.authStateManager.updateAuthState();
 
-        return;
-				} else {
-					console.debug('handling redirect...');
+				return;
+				// } else {
+				// 	console.debug('handling redirect...');
 
-					if (tokens) {
-						console.debug('tokens:', tokens);
-					}
+				// 	if (tokens) {
+				// 		console.debug('tokens:', tokens);
+				// 	}
 
-					await oktaAuth.handleLoginRedirect(tokens);
+				// 	await oktaAuth.handleLoginRedirect(tokens);
 
-					return getUser(oktaAuth, dispatch);
-				}
+				// 	return getUser(oktaAuth, dispatch);
 			} else if (!authState?.isAuthenticated) {
 				console.debug('setting original uri...');
 
@@ -49,14 +50,45 @@ export const useAuthActions = () => {
 
 					console.debug('loginHint:', loginHint);
 
-					console.debug('doing signInWithRedirect...');
+					console.debug('generating URL...');
 
-					dispatch({ type: 'LOGIN' });
+					dispatch({ type: 'LOGIN_START' });
+
+					const {
+						responseType,
+						redirectUri,
+						state,
+						nonce,
+						scopes,
+						codeChallengeMethod,
+						codeChallenge,
+						clientId,
+					} = await oktaAuth.token.prepareTokenParams();
+					const { issuer } = await oktaAuth.options;
+					// console.debug(JSON.stringify(params, null, 2));
+					// console.debug(JSON.stringify(config, null, 2));
+
+					let authUrl = new URL(`${issuer}/authorize`);
+
+					authUrl.searchParams.append('client_id', clientId);
+					authUrl.searchParams.append('response_type', responseType);
+					authUrl.searchParams.append('scope', scopes);
+					authUrl.searchParams.append('redirect_uri', redirectUri);
+					authUrl.searchParams.append('state', state);
+					authUrl.searchParams.append('nonce', nonce);
+					authUrl.searchParams.append(
+						'code_challenge_method',
+						codeChallengeMethod
+					);
+					authUrl.searchParams.append('code_challenge', codeChallenge);
+					authUrl.searchParams.append('response_mode', 'okta_post_message');
+
+					return dispatch({ type: 'LOGIN_AUTHORIZE', payload: { authUrl } });
 
 					// return oktaAuth.token.getWithPopup();
-					return oktaAuth.signInWithRedirect({
-						loginHint: loginHint,
-					});
+					// return oktaAuth.signInWithRedirect({
+					// 	loginHint: loginHint,
+					// });
 				} else {
 					const { tokens } = await oktaAuth.token.getWithoutPrompt();
 

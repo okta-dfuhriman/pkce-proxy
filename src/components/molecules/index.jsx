@@ -1,1 +1,4 @@
-export * from './AppNavBar.jsx';
+/** @format */
+
+export * from './AppNavBar';
+export * from './AuthModal';

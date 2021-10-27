@@ -1,4 +1,6 @@
-import {Home} from '../../components';
+/** @format */
+
+import { Home } from '../components';
 
 export const routes = [
 	// {

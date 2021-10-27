@@ -1,5 +1,7 @@
+/** @format */
+
 export * from './atoms';
 export * from './molecules';
 export * from './organisms';
-export * from './withRoot';
+export * from './pages';
 export * from './seo';

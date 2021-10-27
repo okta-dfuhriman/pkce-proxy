@@ -3,8 +3,7 @@
 import { IconButton } from '@mui/material';
 import { Logout } from '@mui/icons-material';
 import { Button } from '../../../components';
-import { useAuthActions } from '../../../hooks';
-import { useAuthDispatch } from '../../../providers';
+import { useAuthActions, useAuthDispatch } from '../../../providers';
 
 export const LogoutButton = props => {
 	const isIconButton = props?.isiconbutton === 'true' ? true : false;

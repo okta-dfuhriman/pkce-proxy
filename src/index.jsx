@@ -1,9 +1,12 @@
-import React from "react";
-import ReactDOM from "react-dom";
-import { BrowserRouter as Router } from "react-router-dom";
-import App from "./app.jsx";
-import { HelmetProvider } from "react-helmet-async";
-import reportWebVitals from "./reportWebVitals";
+/** @format */
+
+import React from 'react';
+import ReactDOM from 'react-dom';
+import { BrowserRouter as Router } from 'react-router-dom';
+import App from './App';
+import './styles/index.css';
+import { HelmetProvider } from 'react-helmet-async';
+import reportWebVitals from './reportWebVitals';
 
 /**
  * Root of react site
@@ -14,21 +17,21 @@ import reportWebVitals from "./reportWebVitals";
 
 // Render the site https://reactjs.org/docs/react-dom.html#render
 ReactDOM.render(
-  <React.StrictMode>
-    <HelmetProvider>
-      <Router>
-        <App />
-      </Router>
-    </HelmetProvider>
-  </React.StrictMode>,
-  document.getElementById("root")
+	<React.StrictMode>
+		<HelmetProvider>
+			<Router>
+				<App />
+			</Router>
+		</HelmetProvider>
+	</React.StrictMode>,
+	document.getElementById('root')
 );
 
 // Hot Module Replacement (HMR) - Remove this snippet to remove HMR.
 // Learn more: https://vitejs.dev/guide/api-hmr.html
-if (import.meta.hot) {
-  import.meta.hot.accept();
-}
+// if (import.meta.hot) {
+// 	import.meta.hot.accept();
+// }
 
 // If you want to start measuring performance in your app, pass a function
 // to log results (for example: reportWebVitals(console.log))

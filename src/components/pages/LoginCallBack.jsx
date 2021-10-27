@@ -1,7 +1,7 @@
 /** @format */
 import { useEffect } from 'react';
-import { Loader } from '../../../components';
-import { useAuthState, useAuthDispatch } from '../../../providers';
+import { Loader } from '../../components';
+import { useAuthState, useAuthDispatch } from '../../providers';
 
 const ORIGIN = process.env.REACT_APP_OKTA_URL;
 
@@ -21,7 +21,6 @@ export const LoginCallback = () => {
 				ORIGIN
 			);
 		});
-		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
 
 	return (

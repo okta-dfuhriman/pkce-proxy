@@ -5,12 +5,14 @@ import { IconButton, DialogContent, DialogTitle } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import swal from 'sweetalert';
 import { AuthDialog, Loader } from '../../components';
-import { useAuthDispatch, useAuthState } from '../../providers';
+import { useAuthActions, useAuthDispatch, useAuthState } from '../../providers';
+import { Login } from '@mui/icons-material';
 
 export const AuthModal = props => {
 	const { onClose } = props;
 	const dispatch = useAuthDispatch();
-	const { authModalIsVisible, isLoading, iFrameIsVisible, user } =
+	const { login } = useAuthActions();
+	const { authModalIsVisible, isLoading, iFrameIsVisible, user, authUrl } =
 		useAuthState();
 
 	const URL = process.env.REACT_APP_STEP_UP_URL,
@@ -23,16 +25,24 @@ export const AuthModal = props => {
 		dispatch({ type: 'LOGIN_CANCEL' });
 		return onClose();
 	};
+
+	useEffect(() => {
+		if (authModalIsVisible) {
+			login(dispatch);
+		}
+	}, [authModalIsVisible]);
 	useEffect(() => {
 		const handler = ({ origin, data }) => {
-      let options = {};
-      
+			let options = {};
+
+			console.debug(data);
+
 			switch (data?.type) {
 				case 'onload':
 					if (data?.result === 'success') {
 						return dispatch({ type: 'LOGIN_STARTED' });
 					}
-					break; 
+					break;
 				case 'callback':
 					if (origin !== window.location.origin) {
 						return;
@@ -55,9 +65,9 @@ export const AuthModal = props => {
 							button: 'Drats',
 							icon: 'error',
 						};
-            return swal(options);
+						return swal(options);
 					}
-          break;
+					break;
 				default:
 					break;
 			}
@@ -90,9 +100,9 @@ export const AuthModal = props => {
 			</DialogTitle>
 			<DialogContent sx={{ width: modalWidth, height: modalHeight }}>
 				{isLoading && <Loader />}
-				{src && iFrameIsVisible && (
+				{authUrl && iFrameIsVisible && (
 					<iframe
-						src={src}
+						src={authUrl}
 						name='iframe-auth'
 						title='Login'
 						width={modalWidth}

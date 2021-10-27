@@ -13,6 +13,7 @@ export const AuthReducer = (state, action) => {
 	switch (action.type) {
 		case 'GET_USER':
 			return { ...state, profileIsLoading: true };
+		case 'LOGIN_AUTHORIZE':
 		case 'LOGIN_STARTED':
 			return {
 				...state,
