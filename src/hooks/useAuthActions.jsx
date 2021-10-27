@@ -83,7 +83,10 @@ export const useAuthActions = () => {
 					authUrl.searchParams.append('code_challenge', codeChallenge);
 					authUrl.searchParams.append('response_mode', 'okta_post_message');
 
-					return dispatch({ type: 'LOGIN_AUTHORIZE', payload: { authUrl } });
+					return dispatch({
+						type: 'LOGIN_AUTHORIZE',
+						payload: { authUrl: authUrl.toString() },
+					});
 
 					// return oktaAuth.token.getWithPopup();
 					// return oktaAuth.signInWithRedirect({
