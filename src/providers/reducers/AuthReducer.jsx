@@ -3,6 +3,8 @@
 export const initialState = {
 	isLoading: false,
 	isAuthenticated: false,
+	authModalIsVisible: false,
+	iFrameIsVisible: false,
 };
 
 export const AuthReducer = (state, action) => {
@@ -12,8 +14,7 @@ export const AuthReducer = (state, action) => {
 	// console.debug(JSON.stringify(action, null, 2));
 	switch (action.type) {
 		case 'GET_USER':
-			return { ...state, profileIsLoading: true };
-		case 'LOGIN_AUTHORIZE':
+			return { ...state, ...action?.payload, profileIsLoading: true };
 		case 'LOGIN_STARTED':
 			return {
 				...state,
@@ -22,13 +23,7 @@ export const AuthReducer = (state, action) => {
 				authModalIsVisible: true,
 				isLoading: false,
 			};
-		case 'LOGIN_START':
-			return {
-				...state,
-				...action?.payload,
-				isLoading: true,
-			};
-		case 'LOGIN_MODAL_START':
+		case 'LOGIN_INIT':
 			return {
 				...state,
 				...action?.payload,
@@ -47,17 +42,10 @@ export const AuthReducer = (state, action) => {
 				authModalIsVisible: false,
 			};
 		case 'LOGIN_SUCCESS':
-			state = {
-				...state,
-				isStepUpRequired: false,
-				fidoMFA: false,
-				isLoading: false,
-			};
 		case 'GET_USER_SUCCESS':
 		case 'SUCCESS':
 			return {
 				...state,
-				isStale: true,
 				...action?.payload,
 				isLoading: false,
 			};
@@ -72,6 +60,7 @@ export const AuthReducer = (state, action) => {
 			return { ...state, ...action?.payload, isLoading: false };
 		case 'LOGOUT':
 			return { ...state, ...action?.payload, isLoading: true };
+		case 'ERROR':
 		case 'FETCH_ERROR':
 		case 'LOGIN_ERROR':
 			return { ...state, errorMessage: action?.error };

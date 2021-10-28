@@ -5,19 +5,17 @@ import { IconButton, DialogContent, DialogTitle } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import swal from 'sweetalert';
 import { AuthDialog, Loader } from '../../components';
-import { useAuthActions, useAuthDispatch, useAuthState } from '../../providers';
-import { Login } from '@mui/icons-material';
+import { useAuthDispatch, useAuthState } from '../../providers';
 
 export const AuthModal = props => {
 	const { onClose } = props;
 	const dispatch = useAuthDispatch();
-	const { login } = useAuthActions();
-	const { authModalIsVisible, isLoading, iFrameIsVisible, user, authUrl } =
+	const { authModalIsVisible, isLoading, iFrameIsVisible, user } =
 		useAuthState();
 
-	const URL = process.env.REACT_APP_STEP_UP_URL,
+	const URL = process.env.REACT_APP_AUTH_URL,
 		src = user?.email ? `${URL}?login_hint=${user.email}` : URL,
-		ALLOW = process.env.REACT_APP_STEP_UP_ALLOW,
+		ALLOW = process.env.REACT_APP_AUTH_ALLOW,
 		modalWidth = '400px',
 		modalHeight = '650px';
 
@@ -25,17 +23,9 @@ export const AuthModal = props => {
 		dispatch({ type: 'LOGIN_CANCEL' });
 		return onClose();
 	};
-
-	useEffect(() => {
-		if (authModalIsVisible) {
-			login(dispatch);
-		}
-	}, [authModalIsVisible]);
 	useEffect(() => {
 		const handler = ({ origin, data }) => {
 			let options = {};
-
-			console.debug(data);
 
 			switch (data?.type) {
 				case 'onload':
@@ -48,14 +38,14 @@ export const AuthModal = props => {
 						return;
 					}
 					if (data?.result === 'success') {
-						dispatch({
+						return dispatch({
 							type: 'LOGIN_SUCCESS',
-							payload: { authModalIsVisible: false },
+							payload: { authModalIsVisible: false, iFrameIsVisible: false },
 						});
 					} else {
 						dispatch({
 							type: 'LOGIN_ERROR',
-							payload: { authModalIsVisible: false },
+							payload: { authModalIsVisible: false, iFrameIsVisible: false },
 						});
 
 						options = {
@@ -67,7 +57,6 @@ export const AuthModal = props => {
 						};
 						return swal(options);
 					}
-					break;
 				default:
 					break;
 			}
@@ -79,7 +68,7 @@ export const AuthModal = props => {
 	}, []);
 
 	return (
-		<AuthDialog open={authModalIsVisible} onClose={onClose}>
+		<AuthDialog open={authModalIsVisible ?? false} onClose={onClose}>
 			<DialogTitle>
 				<IconButton
 					edge='end'
@@ -100,9 +89,9 @@ export const AuthModal = props => {
 			</DialogTitle>
 			<DialogContent sx={{ width: modalWidth, height: modalHeight }}>
 				{isLoading && <Loader />}
-				{authUrl && iFrameIsVisible && (
+				{src && iFrameIsVisible && (
 					<iframe
-						src={authUrl}
+						src={src}
 						name='iframe-auth'
 						title='Login'
 						width={modalWidth}

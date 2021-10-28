@@ -16,12 +16,12 @@ import { AccountCircle } from '@mui/icons-material';
 import { useAuthState } from '../../providers';
 
 export const AppNavBar = () => {
-	const { authModalIsVisible, isAuthenticated, user } = useAuthState();
+	const { authModalIsVisible, isAuthenticated, user } = useAuthState() || {};
 
 	// useEffect(() => {
 	// 	console.debug('isAuthenticated:', isAuthenticated);
 	// }, [isAuthenticated]);
-
+	// console.debug('show modal:', authModalIsVisible);
 	return (
 		<AppBar>
 			<AuthModal

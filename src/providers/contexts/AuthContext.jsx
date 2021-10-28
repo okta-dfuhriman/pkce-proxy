@@ -11,6 +11,7 @@ import {
 } from '../index';
 
 export const AuthStateContext = createContext();
+AuthStateContext.displayName = 'AuthContext';
 
 export const AuthProvider = ({ children }) => {
 	const { oktaAuth } = useOktaAuth();

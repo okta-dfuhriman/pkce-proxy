@@ -1,7 +1,7 @@
 /** @format */
 
 import { Button } from '../../../components';
-import { useAuthActions, useAuthDispatch } from '../../../providers';
+import { useAuthDispatch } from '../../../providers';
 
 export const LoginButton = props => {
 	const dispatch = useAuthDispatch();
@@ -9,7 +9,7 @@ export const LoginButton = props => {
 
 	props = {
 		// onClick: () => login(dispatch, { ...props }),
-		onClick: () => dispatch({ type: 'LOGIN_MODAL_START' }),
+		onClick: () => dispatch({ type: 'LOGIN_INIT' }),
 		children: 'Login',
 		color: 'inherit',
 		...props,

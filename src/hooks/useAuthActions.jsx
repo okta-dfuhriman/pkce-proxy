@@ -1,18 +1,83 @@
 /** @format */
 
+import { Try } from '@mui/icons-material';
 import { useOktaAuth } from '@okta/okta-react';
 import { getUserInfo as getUser } from '../utils';
 
-const ORG_URL = process.env.REACT_APP_OKTA_ORG_URL;
-
 export const useAuthActions = () => {
 	const { authState, oktaAuth } = useOktaAuth();
+
+	const errorHandler = (dispatch, error, type = 'LOGIN_ERROR') => {
+		if (dispatch) {
+			dispatch({ type: type ?? 'LOGIN_ERROR', error: error });
+		}
+		return console.error(`${type}:`, error);
+	};
+
+	const isLoginRedirect = async dispatch => {
+		try {
+			const { pkce, responseType, responseMode, redirectUri } = oktaAuth,
+				location = window.location,
+				isRedirectUri =
+					location.href && location.href.indexOf(redirectUri) === 0,
+				codeFlow = pkce || responseType === 'code' || responseMode === 'query',
+				hashOrSearch =
+					codeFlow && responseMode !== 'fragment'
+						? location.search
+						: location.hash,
+				hasTokensInHash = /((id|access)_token)/i.test(location.hash),
+				hasCode =
+					/(code=)/i.test(hashOrSearch) ||
+					/(interaction_code)/i.test(hashOrSearch),
+				hasErrorInUrl =
+					/(error=)/i.test(hashOrSearch) ||
+					/(error_description)/i.test(hashOrSearch);
+
+			const result =
+				hasTokensInHash ||
+				(codeFlow && hasCode) ||
+				hasErrorInUrl ||
+				isRedirectUri;
+			console.debug('isLoginRedirect:', result);
+			return result;
+		} catch (error) {
+			return errorHandler(dispatch, error);
+		}
+	};
+
+	const silentLogin = async dispatch => {
+		try {
+			let hasSession = false;
+			console.debug('doing silent auth...');
+
+			const { tokens } = await oktaAuth.token.getWithoutPrompt();
+
+			if (!tokens) {
+				throw new Error('No tokens!');
+			}
+
+			await oktaAuth.tokenManager.setTokens(tokens);
+
+			const isAuthenticated = await oktaAuth.isAuthenticated();
+
+			hasSession = isAuthenticated;
+
+			return { isAuthenticated, hasSession };
+		} catch (error) {
+			return errorHandler(dispatch, error);
+		}
+	};
 
 	const login = async (dispatch, props) => {
 		try {
 			const tokens = props?.tokens;
 
-			if (oktaAuth.isLoginRedirect() || tokens) {
+			const isRedirect = await isLoginRedirect(dispatch),
+				handleRedirect = isLoginRedirect || tokens;
+
+			let hasSession, isAuthenticated;
+
+			if (handleRedirect) {
 				console.debug('handling Okta redirect...');
 
 				dispatch({ type: 'LOGIN_REDIRECT' });
@@ -23,89 +88,30 @@ export const useAuthActions = () => {
 
 				await oktaAuth.authStateManager.updateAuthState();
 
-				return;
-				// } else {
-				// 	console.debug('handling redirect...');
+				({ hasSession, isAuthenticated } = await silentLogin(dispatch));
+			} else {
+				hasSession = await oktaAuth.session.exists();
+				isAuthenticated = await oktaAuth.isAuthenticated();
 
-				// 	if (tokens) {
-				// 		console.debug('tokens:', tokens);
-				// 	}
-
-				// 	await oktaAuth.handleLoginRedirect(tokens);
-
-				// 	return getUser(oktaAuth, dispatch);
-			} else if (!authState?.isAuthenticated) {
-				console.debug('setting original uri...');
-
-				oktaAuth.setOriginalUri(window.location.href);
-
-				console.debug('checking for existing Okta session...');
-
-				const hasSession = await oktaAuth.session.exists();
-
-				console.debug('session:', hasSession);
-
-				if (!hasSession) {
-					const loginHint = props?.loginhint;
-
-					console.debug('loginHint:', loginHint);
-
-					console.debug('generating URL...');
-
-					dispatch({ type: 'LOGIN_START' });
-
-					const {
-						responseType,
-						redirectUri,
-						state,
-						nonce,
-						scopes,
-						codeChallengeMethod,
-						codeChallenge,
-						clientId,
-					} = await oktaAuth.token.prepareTokenParams();
-					const { issuer } = await oktaAuth.options;
-					// console.debug(JSON.stringify(params, null, 2));
-					// console.debug(JSON.stringify(config, null, 2));
-
-					let authUrl = new URL(`${issuer}/authorize`);
-
-					authUrl.searchParams.append('client_id', clientId);
-					authUrl.searchParams.append('response_type', responseType);
-					authUrl.searchParams.append('scope', scopes);
-					authUrl.searchParams.append('redirect_uri', redirectUri);
-					authUrl.searchParams.append('state', state);
-					authUrl.searchParams.append('nonce', nonce);
-					authUrl.searchParams.append(
-						'code_challenge_method',
-						codeChallengeMethod
-					);
-					authUrl.searchParams.append('code_challenge', codeChallenge);
-					authUrl.searchParams.append('response_mode', 'okta_post_message');
-
-					return dispatch({
-						type: 'LOGIN_AUTHORIZE',
-						payload: { authUrl: authUrl.toString() },
-					});
-
-					// return oktaAuth.token.getWithPopup();
-					// return oktaAuth.signInWithRedirect({
-					// 	loginHint: loginHint,
-					// });
+				if (
+					(isAuthenticated && !oktaAuth.getAccessToken) ||
+					(!isAuthenticated && hasSession)
+				) {
+					({ hasSession, isAuthenticated } = await silentLogin(dispatch));
 				} else {
-					const { tokens } = await oktaAuth.token.getWithoutPrompt();
-
-					if (tokens) {
-						await oktaAuth.tokenManager.setTokens(tokens);
-					}
+					return dispatch({ type: 'LOGIN_INIT' });
 				}
+			}
+
+			if (isAuthenticated) {
+				dispatch({
+					type: 'LOGIN_SUCCESS',
+					payload: { iFrameIsVisible: false, authModalIsVisible: false },
+				});
 				return getUser(oktaAuth, dispatch);
 			}
-		} catch (err) {
-			if (dispatch) {
-				dispatch({ type: 'LOGIN_ERROR', error: err });
-			}
-			return console.error('login error:', err);
+		} catch (error) {
+			return errorHandler(dispatch, error);
 		}
 	};
 
@@ -128,6 +134,7 @@ export const useAuthActions = () => {
 
 	return {
 		getUser,
+		isLoginRedirect,
 		login,
 		logout,
 	};
