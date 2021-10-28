@@ -65,14 +65,12 @@ export const useAuthActions = () => {
 						clientId,
 					} = await oktaAuth.token.prepareTokenParams();
 					const { issuer } = await oktaAuth.options;
-					// console.debug(JSON.stringify(params, null, 2));
-					// console.debug(JSON.stringify(config, null, 2));
 
 					let authUrl = new URL(`${issuer}/v1/authorize`);
 
 					authUrl.searchParams.append('client_id', clientId);
 					authUrl.searchParams.append('response_type', responseType);
-					authUrl.searchParams.append('scope', scopes);
+					authUrl.searchParams.append('scope', scopes.join(' '));
 					authUrl.searchParams.append('redirect_uri', redirectUri);
 					authUrl.searchParams.append('state', state);
 					authUrl.searchParams.append('nonce', nonce);
