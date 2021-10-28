@@ -68,7 +68,7 @@ export const useAuthActions = () => {
 					// console.debug(JSON.stringify(params, null, 2));
 					// console.debug(JSON.stringify(config, null, 2));
 
-					let authUrl = new URL(`${issuer}/authorize`);
+					let authUrl = new URL(`${issuer}/v1/authorize`);
 
 					authUrl.searchParams.append('client_id', clientId);
 					authUrl.searchParams.append('response_type', responseType);
