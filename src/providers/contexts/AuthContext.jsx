@@ -31,7 +31,8 @@ export const AuthProvider = ({ children }) => {
 		...useAuthActions(),
 		...state,
 	};
-
+	// console.log('=== state ===');
+	// console.log(state);
 	return (
 		<AuthStateContext.Provider value={contextValues}>
 			<AuthDispatchContext.Provider value={dispatch}>

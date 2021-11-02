@@ -6,6 +6,7 @@ import {
 	AppBar,
 	AuthModal,
 	LinkIconButton,
+	LoadingButton,
 	LoginButton,
 	LogoutButton,
 	Toolbar,
@@ -16,11 +17,14 @@ import { AccountCircle } from '@mui/icons-material';
 import { useAuthState } from '../../providers';
 
 export const AppNavBar = () => {
-	const { authModalIsVisible, isAuthenticated, user } = useAuthState();
-
-	// useEffect(() => {
-	// 	console.debug('isAuthenticated:', isAuthenticated);
-	// }, [isAuthenticated]);
+	const {
+		authModalIsVisible,
+		isAuthenticated,
+		user,
+		isLoadingLogin,
+		isLoadingProfile,
+		isLoadingLogout,
+	} = useAuthState();
 
 	return (
 		<AppBar>
@@ -33,7 +37,7 @@ export const AppNavBar = () => {
 				<Box sx={{ flex: 1, display: 'flex', justifyContent: 'flex-start' }}>
 					{isAuthenticated && (
 						<div>
-							<LinkIconButton to='/me'>
+							<LinkIconButton to='/profile'>
 								<AccountCircle />
 								<Typography variant='subtitle1'>
 									&nbsp;&nbsp;{user?.name}
@@ -53,18 +57,19 @@ export const AppNavBar = () => {
 					</Typography>
 				</Link>
 				<Box sx={{ flex: 1, display: 'flex', justifyContent: 'flex-end' }}>
-					{isAuthenticated && (
+					{!isLoadingProfile && !isLoadingLogin && isAuthenticated && (
 						<Fragment>
 							<LogoutButton
 								isiconbutton='true'
 								sx={{ color: 'secondary.main' }}
+								loading={isLoadingLogout}
 							/>
 						</Fragment>
 					)}
-					{!isAuthenticated && (
+					{(isLoadingLogin || isLoadingProfile || !isAuthenticated) && (
 						<Fragment>
 							<div>
-								<LoginButton />
+								<LoginButton loading={isLoadingLogin || isLoadingProfile} />
 							</div>
 						</Fragment>
 					)}

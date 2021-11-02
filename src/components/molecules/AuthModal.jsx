@@ -6,17 +6,23 @@ import CloseIcon from '@mui/icons-material/Close';
 import swal from 'sweetalert';
 import { AuthDialog, Loader } from '../../components';
 import { useAuthActions, useAuthDispatch, useAuthState } from '../../providers';
-import { Login } from '@mui/icons-material';
+
+const ENV = process.env.NODE_ENV;
 
 export const AuthModal = props => {
 	const { onClose } = props;
 	const dispatch = useAuthDispatch();
 	const { login } = useAuthActions();
-	const { authModalIsVisible, isLoading, iFrameIsVisible, user, authUrl } =
-		useAuthState();
+	const {
+		authModalIsVisible,
+		isLoadingLogin,
+		iFrameIsVisible,
+		user,
+		authUrl,
+		tokenParams,
+	} = useAuthState();
 
 	const URL = process.env.REACT_APP_STEP_UP_URL,
-		src = user?.email ? `${URL}?login_hint=${user.email}` : URL,
 		ALLOW = process.env.REACT_APP_STEP_UP_ALLOW,
 		modalWidth = '400px',
 		modalHeight = '650px';
@@ -27,55 +33,65 @@ export const AuthModal = props => {
 	};
 
 	useEffect(() => {
+		console.log('authModalIsVisible:', authModalIsVisible);
 		if (authModalIsVisible) {
 			login(dispatch);
 		}
 	}, [authModalIsVisible]);
 	useEffect(() => {
-		const handler = ({ origin, data }) => {
-			let options = {};
+		if (tokenParams?.authorizationCode) {
+			return login(dispatch, {
+				tokenParams,
+			});
+		}
+	}, [tokenParams]);
+	useEffect(() => {
+		const responseHandler = ({ origin, data }) => {
+			if (ENV === 'production') {
+				if (origin !== window.location.origin) {
+					return dispatch({
+						type: 'LOGIN_ERROR',
+						payload: { iFrameIsVisible: false, authModalIsVisible: false },
+						error: `'origin' [${origin}] not allowed`,
+					});
+				}
+			}
 
-			console.debug(data);
+			if (data?.type === 'onload' && data?.result === 'success') {
+				return dispatch({ type: 'LOGIN_STARTED' });
+			}
 
-			switch (data?.type) {
-				case 'onload':
-					if (data?.result === 'success') {
-						return dispatch({ type: 'LOGIN_STARTED' });
-					}
-					break;
-				case 'callback':
-					if (origin !== window.location.origin) {
-						return;
-					}
-					if (data?.result === 'success') {
-						dispatch({
-							type: 'LOGIN_SUCCESS',
-							payload: { authModalIsVisible: false },
-						});
-					} else {
-						dispatch({
-							type: 'LOGIN_ERROR',
-							payload: { authModalIsVisible: false },
-						});
-
-						options = {
-							...options,
-							title: 'Uh oh!',
-							text: 'Something went wrong. We are so sorry!',
-							button: 'Drats',
-							icon: 'error',
-						};
-						return swal(options);
-					}
-					break;
-				default:
-					break;
+			if (data?.code) {
+				dispatch({
+					type: 'EXCHANGE_CODE',
+					payload: {
+						tokenParams: {
+							...tokenParams,
+							authorizationCode: data?.code,
+							interactionCode: data?.interaction_code,
+						},
+					},
+				});
 			}
 		};
 
-		window.addEventListener('message', handler);
+		// const timeoutId = setTimeout(() => {
+		// 	return resolve(new Error('OAuth flow timed out'));
+		// }, 120000);
 
-		return () => window.removeEventListener('message', handler);
+		const resolve = error => {
+			if (error) {
+				throw error;
+			}
+
+			// clearTimeout(timeoutId);
+
+			window.removeEventListener('message', responseHandler);
+		};
+
+		window.addEventListener('message', responseHandler);
+
+		return () => resolve();
 	}, []);
 
 	return (
@@ -99,7 +115,7 @@ export const AuthModal = props => {
 				</IconButton>
 			</DialogTitle>
 			<DialogContent sx={{ width: modalWidth, height: modalHeight }}>
-				{isLoading && <Loader />}
+				{isLoadingLogin && <Loader />}
 				{authUrl && iFrameIsVisible && (
 					<iframe
 						src={authUrl}

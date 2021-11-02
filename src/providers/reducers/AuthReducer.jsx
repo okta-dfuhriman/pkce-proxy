@@ -1,8 +1,12 @@
 /** @format */
 
+import * as _ from 'lodash';
+
 export const initialState = {
 	isLoading: false,
+	isLoadingLogin: false,
 	isAuthenticated: false,
+	isLoadingProfile: false,
 };
 
 export const AuthReducer = (state, action) => {
@@ -12,69 +16,62 @@ export const AuthReducer = (state, action) => {
 	// console.debug(JSON.stringify(action, null, 2));
 	switch (action.type) {
 		case 'GET_USER':
-			return { ...state, profileIsLoading: true };
+			return _.merge({}, state, { isLoadingProfile: true });
 		case 'LOGIN_AUTHORIZE':
 		case 'LOGIN_STARTED':
-			return {
-				...state,
-				...action?.payload,
+			return _.merge({}, state, action?.payload, {
 				iFrameIsVisible: true,
 				authModalIsVisible: true,
-				isLoading: false,
-			};
+				isLoadingLogin: false,
+			});
 		case 'LOGIN_START':
-			return {
-				...state,
-				...action?.payload,
-				isLoading: true,
-			};
+			return _.merge({}, state, action?.payload, { isLoadingLogin: true });
 		case 'LOGIN_MODAL_START':
-			return {
-				...state,
-				...action?.payload,
+			return _.merge({}, state, action?.payload, {
 				iFrameIsVisible: true,
 				authModalIsVisible: true,
-				isLoading: true,
-			};
+				isLoadingLogin: true,
+			});
 		case 'LOGIN_REDIRECT':
-			return { ...state, ...action?.payload, isLoading: true };
+			return _.merge({}, state, action?.payload, { isLoadingLogin: true });
+		case 'EXCHANGE_CODE':
 		case 'LOGIN_COMPLETE':
-			return {
-				...state,
-				...action?.payload,
-				isLoading: true,
+			return _.merge({}, state, action?.payload, {
+				isLoadingLogin: true,
 				iFrameIsVisible: false,
 				authModalIsVisible: false,
-			};
-		case 'LOGIN_SUCCESS':
-			state = {
-				...state,
-				isStepUpRequired: false,
-				fidoMFA: false,
-				isLoading: false,
-			};
+			});
+
 		case 'GET_USER_SUCCESS':
+		case 'LOGIN_SUCCESS':
+			delete state.tokenParams;
+			return _.merge({}, state, { isStale: true }, action?.payload, {
+				isLoadingLogin: false,
+			});
 		case 'SUCCESS':
-			return {
-				...state,
-				isStale: true,
-				...action?.payload,
+			return _.merge({}, state, action?.payload, {
 				isLoading: false,
-			};
+			});
 		case 'LOGIN_CANCEL':
-			return {
-				...state,
-				...action?.payload,
-				isLoading: false,
+			return _.merge({}, state, action?.payload, {
+				isLoadingLogin: false,
 				authModalIsVisible: false,
-			};
+				iFrameIsVisible: false,
+			});
+
 		case 'LOGOUT_SUCCESS':
-			return { ...state, ...action?.payload, isLoading: false };
+			return _.merge({}, state, action?.payload, { isLoadingLogout: false });
 		case 'LOGOUT':
-			return { ...state, ...action?.payload, isLoading: true };
+			return _.merge({}, state, action?.payload, { isLoadingLogout: true });
 		case 'FETCH_ERROR':
 		case 'LOGIN_ERROR':
-			return { ...state, errorMessage: action?.error };
+			let result = _.merge({}, state, action?.payload, {
+				errorMessage: action?.error,
+			});
+			if (action?.error) {
+				console.error(action.error);
+			}
+			return result;
 		default:
 			throw new Error(`Unhandled action type: ${action.type}`);
 	}

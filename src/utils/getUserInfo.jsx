@@ -11,7 +11,7 @@ export const getUserInfo = async (oktaAuth, dispatch) => {
 			});
 		}
 
-		let payload = { isAuthenticated, profileIsLoading: false };
+		let payload = { isAuthenticated, isLoadingProfile: false };
 
 		if (isAuthenticated) {
 			console.debug('Fetching user info...');
