@@ -3,7 +3,7 @@ import { useEffect } from 'react';
 import { Loader } from '../../components';
 import { useAuthState, useAuthDispatch } from '../../providers';
 
-const ORIGIN = process.env.REACT_APP_OKTA_URL;
+const ORIGIN = process.env.REACT_APP_OKTA_ORIGIN;
 
 export const LoginCallback = () => {
 	const { login } = useAuthState();
