@@ -3,6 +3,7 @@
 import * as _ from 'lodash';
 
 export const initialState = {
+	isError: false,
 	isLoading: false,
 	isLoadingLogin: false,
 	isAuthenticated: false,
@@ -15,6 +16,11 @@ export const AuthReducer = (state, action) => {
 	// console.debug('=======    action     =======');
 	// console.debug(JSON.stringify(action, null, 2));
 	switch (action.type) {
+		case 'DISMISS_ERROR':
+			if (state?.error) {
+				delete state.error;
+			}
+			return _.merge({}, state, action?.payload, { isError: false });
 		case 'GET_USER':
 			return _.merge({}, state, { isLoadingProfile: true });
 		case 'LOGIN_AUTHORIZE':
@@ -23,6 +29,18 @@ export const AuthReducer = (state, action) => {
 				iFrameIsVisible: true,
 				authModalIsVisible: true,
 				isLoadingLogin: false,
+			});
+		case 'SILENT_AUTH_START':
+			return _.merge({}, state, action?.payload, {
+				isLoadingLogin: true,
+				authModalIsVisible: false,
+				iFrameIsVisible: false,
+			});
+		case 'SILENT_AUTH_END':
+			return _.merge({}, state, action?.payload, {
+				isLoadingLogin: false,
+				authModalIsVisible: false,
+				iFrameIsVisible: false,
 			});
 		case 'LOGIN_START':
 			return _.merge({}, state, action?.payload, { isLoadingLogin: true });
@@ -43,6 +61,7 @@ export const AuthReducer = (state, action) => {
 			});
 
 		case 'GET_USER_SUCCESS':
+		case 'SILENT_AUTH_SUCCESS':
 		case 'LOGIN_SUCCESS':
 			delete state.tokenParams;
 			return _.merge({}, state, { isStale: true }, action?.payload, {
@@ -60,13 +79,15 @@ export const AuthReducer = (state, action) => {
 			});
 
 		case 'LOGOUT_SUCCESS':
-			return _.merge({}, state, action?.payload, { isLoadingLogout: false });
+			return _.merge({}, state, action?.payload);
+		// return _.merge({}, state, action?.payload, { isLoadingLogout: false });
 		case 'LOGOUT':
 			return _.merge({}, state, action?.payload, { isLoadingLogout: true });
 		case 'FETCH_ERROR':
 		case 'LOGIN_ERROR':
-			let result = _.merge({}, state, action?.payload, {
-				errorMessage: action?.error,
+			let result = _.merge({}, state, initialState, action?.payload, {
+				error: action?.error,
+				isError: true,
 			});
 			if (action?.error) {
 				console.error(action.error);

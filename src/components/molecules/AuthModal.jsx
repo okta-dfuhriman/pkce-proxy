@@ -51,7 +51,7 @@ export const AuthModal = props => {
 		const responseHandler = ({ origin, data }) => {
 			if (ENV === 'production') {
 				const isAllowed = ORIGINS.includes(origin);
-				if (!isAllowed) {
+				if (isAllowed) {
 					return dispatch({
 						type: 'LOGIN_ERROR',
 						payload: { iFrameIsVisible: false, authModalIsVisible: false },

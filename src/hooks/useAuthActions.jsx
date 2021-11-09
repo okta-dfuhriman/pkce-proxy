@@ -3,10 +3,73 @@
 import { useOktaAuth } from '@okta/okta-react';
 import { getUserInfo as getUser } from '../utils';
 
-const ORG_URL = process.env.REACT_APP_OKTA_ORG_URL;
-
 export const useAuthActions = () => {
 	const { authState, oktaAuth } = useOktaAuth();
+
+	const silentAuth = async (dispatch, options) => {
+		try {
+			let config = {};
+
+			let hasSession = options?.hasSession;
+
+			if (hasSession === undefined) {
+				console.debug('checking for existing Okta session...');
+
+				hasSession = await oktaAuth.session.exists();
+
+				console.debug('session:', hasSession);
+			}
+
+			if (!hasSession) {
+				dispatch({ type: 'SILENT_AUTH_END' });
+				return;
+			}
+
+			dispatch({
+				type: 'SILENT_AUTH_START',
+			});
+
+			if (!options) {
+				config.redirectUri = `${window.location.origin}/login/callback`;
+			}
+
+			const { tokens } = await oktaAuth.token.getWithoutPrompt(config);
+
+			if (tokens) {
+				await oktaAuth.tokenManager.setTokens(tokens);
+
+				dispatch({ type: 'SILENT_AUTH_SUCCESS' });
+				return getUser(oktaAuth, dispatch);
+			} else return;
+		} catch (error) {
+			throw new Error(error);
+		}
+	};
+
+	const iFrameAuth = async (dispatch, options) => {
+		try {
+			const { loginHint } = options || {};
+
+			if (loginHint) {
+				console.debug('loginHint:', loginHint);
+			}
+
+			console.debug('generating URL...');
+
+			dispatch({ type: 'LOGIN_START' });
+
+			const { authUrl, tokenParams } = await generateAuthUrl(oktaAuth);
+
+			console.log('authState:', authState);
+
+			return dispatch({
+				type: 'LOGIN_AUTHORIZE',
+				payload: { authUrl, tokenParams },
+			});
+		} catch (error) {
+			throw new Error(error);
+		}
+	};
 
 	const login = async (dispatch, props) => {
 		try {
@@ -59,33 +122,16 @@ export const useAuthActions = () => {
 				if (!hasSession) {
 					const loginHint = props?.loginhint;
 
-					console.debug('loginHint:', loginHint);
-
-					console.debug('generating URL...');
-
-					dispatch({ type: 'LOGIN_START' });
-
-					const { authUrl, tokenParams } = await generateAuthUrl(oktaAuth);
-
-					console.log('authState:', authState);
-					dispatch({
-						type: 'LOGIN_AUTHORIZE',
-						payload: { authUrl, tokenParams },
-					});
+					return await iFrameAuth(dispatch, { loginHint });
 				} else {
-					const { tokens } = await oktaAuth.token.getWithoutPrompt();
-
-					if (tokens) {
-						await oktaAuth.tokenManager.setTokens(tokens);
-					}
-					return getUser(oktaAuth, dispatch);
+					return await silentAuth(dispatch, { hasSession });
 				}
 			}
-		} catch (err) {
+		} catch (error) {
 			if (dispatch) {
-				dispatch({ type: 'LOGIN_ERROR', error: err });
+				dispatch({ type: 'LOGIN_ERROR', error: error });
 			}
-			return console.error('login error:', err);
+			return console.error('login error:', error);
 		}
 	};
 
@@ -109,6 +155,7 @@ export const useAuthActions = () => {
 		getUser,
 		login,
 		logout,
+		silentAuth,
 	};
 };
 
