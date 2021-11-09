@@ -3,11 +3,13 @@
 import { useEffect } from 'react';
 import { IconButton, DialogContent, DialogTitle } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
-import swal from 'sweetalert';
 import { AuthDialog, Loader } from '../../components';
 import { useAuthActions, useAuthDispatch, useAuthState } from '../../providers';
 
 const ENV = process.env.NODE_ENV;
+const ORIGINS = process.env.REACT_APP_ORIGIN_ALLOW?.split(/, {0,2}/) || [
+	window.location.origin,
+];
 
 export const AuthModal = props => {
 	const { onClose } = props;
@@ -17,13 +19,11 @@ export const AuthModal = props => {
 		authModalIsVisible,
 		isLoadingLogin,
 		iFrameIsVisible,
-		user,
 		authUrl,
 		tokenParams,
 	} = useAuthState();
 
-	const URL = process.env.REACT_APP_STEP_UP_URL,
-		ALLOW = process.env.REACT_APP_STEP_UP_ALLOW,
+	const ALLOW = process.env.REACT_APP_STEP_UP_ALLOW,
 		modalWidth = '400px',
 		modalHeight = '650px';
 
@@ -33,10 +33,11 @@ export const AuthModal = props => {
 	};
 
 	useEffect(() => {
-		console.log('authModalIsVisible:', authModalIsVisible);
+		console.debug('authModalIsVisible:', authModalIsVisible);
 		if (authModalIsVisible) {
 			login(dispatch);
 		}
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [authModalIsVisible]);
 	useEffect(() => {
 		if (tokenParams?.authorizationCode) {
@@ -44,11 +45,13 @@ export const AuthModal = props => {
 				tokenParams,
 			});
 		}
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [tokenParams]);
 	useEffect(() => {
 		const responseHandler = ({ origin, data }) => {
 			if (ENV === 'production') {
-				if (origin !== window.location.origin) {
+				const isAllowed = ORIGINS.includes(origin);
+				if (!isAllowed) {
 					return dispatch({
 						type: 'LOGIN_ERROR',
 						payload: { iFrameIsVisible: false, authModalIsVisible: false },
@@ -75,24 +78,23 @@ export const AuthModal = props => {
 			}
 		};
 
-		// const timeoutId = setTimeout(() => {
-		// 	return resolve(new Error('OAuth flow timed out'));
-		// }, 120000);
-
 		const resolve = error => {
 			if (error) {
 				throw error;
 			}
 
-			// clearTimeout(timeoutId);
-
+			console.debug('removing listener...');
 			window.removeEventListener('message', responseHandler);
 		};
 
-		window.addEventListener('message', responseHandler);
+		if (authModalIsVisible) {
+			console.debug('adding listener...');
+			window.addEventListener('message', responseHandler);
+		}
 
 		return () => resolve();
-	}, []);
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [authModalIsVisible]);
 
 	return (
 		<AuthDialog open={authModalIsVisible} onClose={onClose}>
