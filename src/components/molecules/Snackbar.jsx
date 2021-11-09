@@ -14,15 +14,17 @@ export const Snackbar = props => {
 		return onClose();
 	};
 
-	let anchor;
+	let customProps = {
+		...props,
+	};
 
 	switch (severity) {
 		case 'error':
 		case 'warning':
-			anchor = { vertical: 'top', horizontal: 'center' };
+			customProps.anchorOrigin = { vertical: 'top', horizontal: 'center' };
 			break;
 		default:
-			anchor = { vertical: 'bottom', horizontal: 'left' };
+			customProps.anchorOrigin = { vertical: 'bottom', horizontal: 'left' };
 			break;
 	}
 
@@ -31,7 +33,7 @@ export const Snackbar = props => {
 			open={open}
 			autoHideDuration={duration ?? 6000}
 			onClose={handleClose}
-			anchorOrigin={anchor}
+			{...customProps}
 		>
 			<Alert
 				onClose={onClose ?? handleClose}
