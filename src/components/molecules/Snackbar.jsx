@@ -28,6 +28,9 @@ export const Snackbar = props => {
 			break;
 	}
 
+	let child =
+		typeof children !== 'string' ? JSON.stringify(children, null, 2) : children;
+
 	return (
 		<MuiSnackbar
 			open={open}
@@ -40,7 +43,7 @@ export const Snackbar = props => {
 				severity={severity ?? 'info'}
 				sx={{ w: '100%' }}
 			>
-				{children ?? 'This is a message'}
+				{child ?? 'This is a message'}
 			</Alert>
 		</MuiSnackbar>
 	);
