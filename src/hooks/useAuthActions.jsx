@@ -1,7 +1,28 @@
 /** @format */
 
 import { useOktaAuth } from '@okta/okta-react';
-import { getUserInfo as getUser } from '../utils';
+import { removeNils } from '@okta/okta-auth-js';
+import { exchangeCodeForTokens, getUserInfo as getUser } from '../utils';
+
+const oAuthParamMap = {
+	clientId: 'client_id',
+	codeChallenge: 'code_challenge',
+	codeChallengeMethod: 'code_challenge_method',
+	display: 'display',
+	idp: 'idp',
+	idpScope: 'idp_scope',
+	loginHint: 'login_hint',
+	maxAge: 'max_age',
+	nonce: 'nonce',
+	prompt: 'prompt',
+	redirectUri: 'redirect_uri',
+	responseMode: 'response_mode',
+	responseType: 'response_type',
+	sessionToken: 'sessionToken',
+	state: 'state',
+	scopes: 'scope',
+	grantType: 'grant_type',
+};
 
 export const useAuthActions = () => {
 	const { authState, oktaAuth } = useOktaAuth();
@@ -80,9 +101,7 @@ export const useAuthActions = () => {
 
 			if (isCodeExchange) {
 				console.log(tokenParams);
-				const response = await oktaAuth.token.exchangeCodeForTokens(
-					tokenParams
-				);
+				const response = await exchangeCodeForTokens(oktaAuth, tokenParams);
 
 				if (!response?.tokens) {
 					return dispatch({
@@ -179,25 +198,6 @@ const generateAuthUrl = async sdk => {
 const buildAuthorizeParams = tokenParams => {
 	let params = {};
 
-	const oAuthParamMap = {
-		clientId: 'client_id',
-		codeChallenge: 'code_challenge',
-		codeChallengeMethod: 'code_challenge_method',
-		display: 'display',
-		idp: 'idp',
-		idpScope: 'idp_scope',
-		loginHint: 'login_hint',
-		maxAge: 'max_age',
-		nonce: 'nonce',
-		prompt: 'prompt',
-		redirectUri: 'redirect_uri',
-		responseMode: 'response_mode',
-		responseType: 'response_type',
-		sessionToken: 'sessionToken',
-		state: 'state',
-		scopes: 'scope',
-	};
-
 	for (const [key, value] of Object.entries(tokenParams)) {
 		let oAuthKey = oAuthParamMap[key];
 
@@ -234,15 +234,4 @@ const toQueryString = obj => {
 	} else {
 		return '';
 	}
-};
-
-const removeNils = obj => {
-	let cleaned = {};
-
-	for (const [key, value] of Object.entries(obj)) {
-		if (value) {
-			cleaned[key] = value;
-		}
-	}
-	return cleaned;
 };
