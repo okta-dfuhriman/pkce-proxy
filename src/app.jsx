@@ -45,7 +45,7 @@ const App = () => {
 											<SecureRoute
 												key={route.path}
 												path={route.path}
-												exact={route?.exact ?? false}
+												exact={route?.isExact ?? false}
 												component={route.component}
 											/>
 										);

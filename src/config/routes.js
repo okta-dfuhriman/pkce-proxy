@@ -1,17 +1,18 @@
 /** @format */
 
-import { LoginCallback, Home, Profile } from '../components';
+import { AppLoginCallback, Home, Profile } from '../components';
 
 export const routes = [
 	{
 		path: '/login/callback',
-		component: LoginCallback,
+		isExact: true,
+		component: AppLoginCallback,
 	},
 	{
-		path: '/me',
-		exact: true,
-		isSecure: true,
+		path: '/profile',
 		component: Profile,
+		isSecure: true,
+		isExact: true,
 	},
 	{
 		path: '/*',

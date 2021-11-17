@@ -6,6 +6,7 @@ import { useAuthActions, useAuthDispatch } from '../../providers';
 export const AppLoginCallback = () => {
 	const { login } = useAuthActions();
 	const dispatch = useAuthDispatch();
+
 	useEffect(() => {
 		return login(dispatch);
 	}, [login, dispatch]);

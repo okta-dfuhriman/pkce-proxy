@@ -17,7 +17,6 @@ export const authConfig = {
 		redirectUri: REDIRECT_URI,
 		scopes: SCOPES.split(' '),
 		pkce: true,
-		responseMode: 'fragment',
 		tokenManager: {
 			autoRenew: true,
 		},

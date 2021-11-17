@@ -2,10 +2,10 @@
 
 import { Box, CircularProgress } from '@mui/material';
 
-export const Loader = ({ size, overlay }) => (
+export const Loader = ({ size, overlay = false }) => (
 	<Box
 		sx={{
-			backgroundColor: 'rgba(255, 255, 255, 0.80)',
+			backgroundColor: overlay ? 'rgba(255, 255, 255, 0.80)' : 'transparent',
 			display: 'flex',
 			height: '100%',
 			width: '100%',
@@ -23,7 +23,6 @@ export const Loader = ({ size, overlay }) => (
 			color='secondary'
 			size={size ?? 65}
 			sx={{
-				// position: 'absolute',
 				left: '50%',
 				top: '50%',
 				transform: 'translate(-50%, -50%)',

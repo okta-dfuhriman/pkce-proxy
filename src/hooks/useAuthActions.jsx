@@ -1,83 +1,133 @@
 /** @format */
 
-import { Try } from '@mui/icons-material';
 import { useOktaAuth } from '@okta/okta-react';
-import { getUserInfo as getUser } from '../utils';
+import { removeNils } from '@okta/okta-auth-js';
+import { exchangeCodeForTokens, getUserInfo as getUser } from '../utils';
+
+const oAuthParamMap = {
+	clientId: 'client_id',
+	codeChallenge: 'code_challenge',
+	codeChallengeMethod: 'code_challenge_method',
+	display: 'display',
+	idp: 'idp',
+	idpScope: 'idp_scope',
+	loginHint: 'login_hint',
+	maxAge: 'max_age',
+	nonce: 'nonce',
+	prompt: 'prompt',
+	redirectUri: 'redirect_uri',
+	responseMode: 'response_mode',
+	responseType: 'response_type',
+	sessionToken: 'sessionToken',
+	state: 'state',
+	scopes: 'scope',
+	grantType: 'grant_type',
+};
 
 export const useAuthActions = () => {
 	const { authState, oktaAuth } = useOktaAuth();
 
-	const errorHandler = (dispatch, error, type = 'LOGIN_ERROR') => {
-		if (dispatch) {
-			dispatch({ type: type ?? 'LOGIN_ERROR', error: error });
-		}
-		return console.error(`${type}:`, error);
-	};
+	const silentAuth = async (dispatch, options) => {
+		let { hasSession, authModalIsVisible } = options || {};
 
-	const isLoginRedirect = async dispatch => {
 		try {
-			const { pkce, responseType, responseMode, redirectUri } = oktaAuth,
-				location = window.location,
-				isRedirectUri =
-					location.href && location.href.indexOf(redirectUri) === 0,
-				codeFlow = pkce || responseType === 'code' || responseMode === 'query',
-				hashOrSearch =
-					codeFlow && responseMode !== 'fragment'
-						? location.search
-						: location.hash,
-				hasTokensInHash = /((id|access)_token)/i.test(location.hash),
-				hasCode =
-					/(code=)/i.test(hashOrSearch) ||
-					/(interaction_code)/i.test(hashOrSearch),
-				hasErrorInUrl =
-					/(error=)/i.test(hashOrSearch) ||
-					/(error_description)/i.test(hashOrSearch);
+			let config = {};
 
-			const result =
-				hasTokensInHash ||
-				(codeFlow && hasCode) ||
-				hasErrorInUrl ||
-				isRedirectUri;
-			console.debug('isLoginRedirect:', result);
-			return result;
-		} catch (error) {
-			return errorHandler(dispatch, error);
-		}
-	};
+			if (hasSession === undefined) {
+				console.debug('checking for existing Okta session...');
 
-	const silentLogin = async dispatch => {
-		try {
-			let hasSession = false;
-			console.debug('doing silent auth...');
+				hasSession = await oktaAuth.session.exists();
 
-			const { tokens } = await oktaAuth.token.getWithoutPrompt();
-
-			if (!tokens) {
-				throw new Error('No tokens!');
+				console.debug('session:', hasSession);
 			}
 
-			await oktaAuth.tokenManager.setTokens(tokens);
+			if (!hasSession) {
+				dispatch({ type: 'SILENT_AUTH_END' });
+				return;
+			}
 
-			const isAuthenticated = await oktaAuth.isAuthenticated();
+			dispatch({
+				type: 'SILENT_AUTH_START',
+			});
 
-			hasSession = isAuthenticated;
+			if (!options) {
+				config.redirectUri = `${window.location.origin}/login/callback`;
+			}
 
-			return { isAuthenticated, hasSession };
+			const { tokens } = (await oktaAuth.token.getWithoutPrompt(config)) || {};
+
+			if (tokens) {
+				await oktaAuth.tokenManager.setTokens(tokens);
+
+				dispatch({ type: 'SILENT_AUTH_SUCCESS' });
+				return getUser(oktaAuth, dispatch);
+			} else return;
 		} catch (error) {
-			return errorHandler(dispatch, error);
+			if (error?.errorCode === 'login_required') {
+				console.debug(error);
+				dispatch({ type: 'SILENT_AUTH_CANCEL' });
+				return iFrameAuth(dispatch, { authModalIsVisible });
+			} else {
+				throw new Error(error);
+			}
+		}
+	};
+
+	const iFrameAuth = async (dispatch, options) => {
+		try {
+			const { authModalIsVisible, loginHint } = options || {};
+
+			if (!authModalIsVisible) {
+				console.debug('authModal is not visible, cancelling login');
+				return dispatch({ type: 'LOGIN_CANCEL' });
+			}
+
+			if (loginHint) {
+				console.debug('loginHint:', loginHint);
+			}
+
+			console.debug('generating URL...');
+
+			dispatch({ type: 'LOGIN_START' });
+
+			const { authUrl, tokenParams } = await generateAuthUrl(oktaAuth);
+
+			console.debug('authState:', authState);
+
+			return dispatch({
+				type: 'LOGIN_AUTHORIZE',
+				payload: { authUrl, tokenParams },
+			});
+		} catch (error) {
+			throw new Error(error);
 		}
 	};
 
 	const login = async (dispatch, props) => {
 		try {
-			const tokens = props?.tokens;
+			const { tokens, tokenParams, authModalIsVisible } = props || {};
 
-			const isRedirect = await isLoginRedirect(dispatch),
-				handleRedirect = isLoginRedirect || tokens;
+			const { authorizationCode, interaction_code } = tokenParams || {};
 
-			let hasSession, isAuthenticated;
+			const isCodeExchange = authorizationCode || interaction_code || false;
 
-			if (handleRedirect) {
+			if (isCodeExchange) {
+				console.log(tokenParams);
+				const response = await exchangeCodeForTokens(oktaAuth, tokenParams);
+
+				if (!response?.tokens) {
+					return dispatch({
+						type: 'LOGIN_ERROR',
+						error: `No tokens in response. Something went wrong! [${response}]`,
+					});
+				}
+
+				await oktaAuth.tokenManager.setTokens(response.tokens);
+
+				await oktaAuth.authStateManager.updateAuthState();
+
+				return dispatch({ type: 'LOGIN_SUCCESS' });
+			} else if (oktaAuth.isLoginRedirect() || tokens) {
 				console.debug('handling Okta redirect...');
 
 				dispatch({ type: 'LOGIN_REDIRECT' });
@@ -88,30 +138,31 @@ export const useAuthActions = () => {
 
 				await oktaAuth.authStateManager.updateAuthState();
 
-				({ hasSession, isAuthenticated } = await silentLogin(dispatch));
-			} else {
-				hasSession = await oktaAuth.session.exists();
-				isAuthenticated = await oktaAuth.isAuthenticated();
+				return;
+			} else if (!authState?.isAuthenticated) {
+				console.debug('setting original uri...');
 
-				if (
-					(isAuthenticated && !oktaAuth.getAccessToken) ||
-					(!isAuthenticated && hasSession)
-				) {
-					({ hasSession, isAuthenticated } = await silentLogin(dispatch));
+				oktaAuth.setOriginalUri(window.location.href);
+
+				console.debug('checking for existing Okta session...');
+
+				const hasSession = await oktaAuth.session.exists();
+
+				console.debug('session:', hasSession);
+
+				if (!hasSession) {
+					const loginHint = props?.loginhint;
+
+					return await iFrameAuth(dispatch, { loginHint, authModalIsVisible });
 				} else {
-					return dispatch({ type: 'LOGIN_INIT' });
+					return await silentAuth(dispatch, { hasSession, authModalIsVisible });
 				}
 			}
-
-			if (isAuthenticated) {
-				dispatch({
-					type: 'LOGIN_SUCCESS',
-					payload: { iFrameIsVisible: false, authModalIsVisible: false },
-				});
-				return getUser(oktaAuth, dispatch);
-			}
 		} catch (error) {
-			return errorHandler(dispatch, error);
+			if (dispatch) {
+				dispatch({ type: 'LOGIN_ERROR', error: error });
+			}
+			return console.error('login error:', error);
 		}
 	};
 
@@ -123,7 +174,6 @@ export const useAuthActions = () => {
 		}
 
 		console.info('executing logout...');
-		dispatch({ type: 'LOGOUT' });
 
 		localStorage.removeItem('user');
 
@@ -134,8 +184,66 @@ export const useAuthActions = () => {
 
 	return {
 		getUser,
-		isLoginRedirect,
 		login,
 		logout,
+		silentAuth,
 	};
+};
+
+const generateAuthUrl = async sdk => {
+	try {
+		const tokenParams = await sdk.token.prepareTokenParams(),
+			{ issuer, authorizeUrl } = sdk.options || {};
+
+		// Use the query params to build the authorize url
+
+		// Get authorizeUrl and issuer
+		const url = authorizeUrl ?? `${issuer}/v1/authorize`;
+
+		const authUrl = url + buildAuthorizeParams(tokenParams);
+
+		return { authUrl, tokenParams };
+	} catch (error) {
+		throw new Error(`Unable to generate auth url [${error}]`);
+	}
+};
+const buildAuthorizeParams = tokenParams => {
+	let params = {};
+
+	for (const [key, value] of Object.entries(tokenParams)) {
+		let oAuthKey = oAuthParamMap[key];
+
+		if (oAuthKey) {
+			params[oAuthKey] = value;
+		}
+	}
+
+	params.response_mode = 'okta_post_message';
+
+	params = removeNils(params);
+
+	return toQueryString(params);
+};
+
+const toQueryString = obj => {
+	let str = [];
+	if (obj) {
+		for (const [key, value] of Object.entries(obj)) {
+			if (value) {
+				let output;
+				if (typeof value === 'string') {
+					output = encodeURIComponent(value);
+				} else if (Array.isArray(value)) {
+					output = value.join('+');
+				}
+
+				str.push(key + '=' + output);
+			}
+		}
+	}
+	if (str.length) {
+		return '?' + str.join('&');
+	} else {
+		return '';
+	}
 };

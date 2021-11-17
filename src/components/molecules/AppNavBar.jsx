@@ -1,6 +1,6 @@
 /** @format */
 
-import React, { Fragment } from 'react';
+import React, { Fragment, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
 	AppBar,
@@ -8,20 +8,39 @@ import {
 	LinkIconButton,
 	LoginButton,
 	LogoutButton,
+	Snackbar,
 	Toolbar,
 	Typography,
 } from '../../components';
 import { Box } from '@mui/material';
 import { AccountCircle } from '@mui/icons-material';
-import { useAuthState } from '../../providers';
+import { useAuthDispatch, useAuthState } from '../../providers';
 
 export const AppNavBar = () => {
-	const { authModalIsVisible, isAuthenticated, user } = useAuthState() || {};
+	const dispatch = useAuthDispatch();
+	const {
+		error,
+		authModalIsVisible,
+		isError,
+		isAuthenticated,
+		isLoadingLogin,
+		isLoadingProfile,
+		isLoadingLogout,
+		silentAuth,
+		user,
+	} = useAuthState();
 
-	// useEffect(() => {
-	// 	console.debug('isAuthenticated:', isAuthenticated);
-	// }, [isAuthenticated]);
-	// console.debug('show modal:', authModalIsVisible);
+	const handleSnackbar = () => {
+		dispatch({ type: 'DISMISS_ERROR' });
+	};
+
+	useEffect(() => {
+		if (!isAuthenticated) {
+			return silentAuth(dispatch);
+		}
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, []);
+
 	return (
 		<AppBar>
 			<AuthModal
@@ -29,11 +48,17 @@ export const AppNavBar = () => {
 				open={authModalIsVisible}
 				onClose={() => {}}
 			/>
+			<Snackbar
+				open={isError}
+				onClose={handleSnackbar}
+				severity='error'
+				children={error}
+			/>
 			<Toolbar>
 				<Box sx={{ flex: 1, display: 'flex', justifyContent: 'flex-start' }}>
 					{isAuthenticated && (
 						<div>
-							<LinkIconButton to='/me'>
+							<LinkIconButton to='/profile'>
 								<AccountCircle />
 								<Typography variant='subtitle1'>
 									&nbsp;&nbsp;{user?.name}
@@ -53,18 +78,19 @@ export const AppNavBar = () => {
 					</Typography>
 				</Link>
 				<Box sx={{ flex: 1, display: 'flex', justifyContent: 'flex-end' }}>
-					{isAuthenticated && (
+					{!isLoadingProfile && !isLoadingLogin && isAuthenticated && (
 						<Fragment>
 							<LogoutButton
 								isiconbutton='true'
 								sx={{ color: 'secondary.main' }}
+								loading={isLoadingLogout}
 							/>
 						</Fragment>
 					)}
-					{!isAuthenticated && (
+					{(isLoadingLogin || isLoadingProfile || !isAuthenticated) && (
 						<Fragment>
 							<div>
-								<LoginButton />
+								<LoginButton loading={isLoadingLogin || isLoadingProfile} />
 							</div>
 						</Fragment>
 					)}

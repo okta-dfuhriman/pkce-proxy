@@ -1,7 +1,7 @@
 /** @format */
 
 import * as React from 'react';
-import { LoginButton, Typography } from '../../../components';
+import { LinkButton, Typography } from '../..';
 import { ProductHeroLayout } from './ProductHeroLayout';
 
 const backgroundImage =
@@ -33,14 +33,7 @@ export const ProductHero = () => {
 			>
 				Enjoy secret offers up to -70% off the best luxury hotels every Sunday.
 			</Typography>
-			<LoginButton
-				color='secondary'
-				size='large'
-				variant='contained'
-				sx={{ mw: 200 }}
-			>
-				Get Started
-			</LoginButton>
+			<LinkButton to='/store'>Get Started</LinkButton>
 			<Typography variant='body2' color='inherit' sx={{ mt: 2 }}>
 				Discover the experience
 			</Typography>

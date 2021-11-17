@@ -15,7 +15,6 @@ import reportWebVitals from './reportWebVitals';
  * And App which defines the content and navigation
  */
 
-// Render the site https://reactjs.org/docs/react-dom.html#render
 ReactDOM.render(
 	<React.StrictMode>
 		<HelmetProvider>
